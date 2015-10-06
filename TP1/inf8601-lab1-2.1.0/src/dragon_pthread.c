@@ -103,7 +103,7 @@ void *dragon_draw_worker(void *data)
             draw->dragon_height, 
             draw->palette);
     
-    return NULL;
+    pthread_exit(NULL);
 }
 
 int dragon_draw_pthread(char **canvas, struct rgb *image, int width, int height, uint64_t size, int nb_thread)
@@ -229,7 +229,7 @@ void *dragon_limit_worker(void *data)
 {
 	struct limit_data *lim = (struct limit_data *) data;
 	piece_limit(lim->start, lim->end, &lim->piece);
-	return NULL;
+	pthread_exit(NULL);
 }
 
 /*

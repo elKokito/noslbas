@@ -18,6 +18,8 @@ extern "C" {
 using namespace std;
 using namespace tbb;
 
+bool bStartWasCalledFlag = false;
+
 class ResourceManager
 {
 
@@ -195,6 +197,7 @@ private:
 
 int dragon_draw_tbb(char **canvas, struct rgb *image, int width, int height, uint64_t size, int nb_thread)
 {
+	bStartWasCalledFlag = true;
 	struct draw_data data;
 	limits_t limits;
 	char *dragon = NULL;
@@ -277,7 +280,7 @@ int dragon_limits_tbb(limits_t *limits, uint64_t size, int nb_thread)
 {
     cout << "Started dragon_limits_tbb" << endl;
     tbb::concurrent_vector<struct limit_data> pieces;
-    DragonLimits lim(&pieces);
+    DragonLimits lim(&pieces); 
 
     task_scheduler_init init(nb_thread);
     tbb::parallel_for(tbb::blocked_range<uint64_t>(0,size), lim);
@@ -285,6 +288,10 @@ int dragon_limits_tbb(limits_t *limits, uint64_t size, int nb_thread)
 
     piece_t piece = lim.getPiece();
 	*limits = piece.limits;
+    if (!bStartWasCalledFlag)
+    {
+	ResourceManager::Instance().ReleaseResources();
+    }
     cout << "Finished dragon_limits_tbb" << endl;
     return 0;
 }
