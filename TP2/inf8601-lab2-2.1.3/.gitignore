@@ -7,3 +7,8 @@
 *.a
 *Makefile
 *sinoscope
+*cache/
+*config.h
+*config.status
+*libtool
+*stamp-h1
