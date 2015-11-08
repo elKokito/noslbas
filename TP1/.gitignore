@@ -1,0 +1,7 @@
+*Makefile
+*.log
+*.status
+*.Po
+*.0
+*.o
+*dragonizer

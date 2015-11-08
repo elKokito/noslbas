@@ -15,7 +15,7 @@
 
 int sinoscope_image_openmp(sinoscope_t *ptr)
 {
-    TODO("sinoscope_image_openmp");
+    /*TODO("sinoscope_image_openmp");*/
 
     if (ptr == NULL)
         return -1;
@@ -26,7 +26,12 @@ int sinoscope_image_openmp(sinoscope_t *ptr)
     float val, px, py;
     unsigned char* b = sino.buf;
 
-    #pragma omp parallel for private(x, y, c, sino)
+    /*printf("width: %d\n", sino.width);*/
+    /*printf("height: %d\n", sino.height);*/
+    /*printf("taylor: %d\n", sino.taylor);*/
+    /*printf("time: %f\n", sino.time);*/
+
+    #pragma omp parallel for private(x, y, c)
     for(x = 1; x < sino.width; ++x){
         for(y = 1; y < sino.height; ++y) {
             px = sino.dx * y - 2 * M_PI;
@@ -39,9 +44,15 @@ int sinoscope_image_openmp(sinoscope_t *ptr)
             val = (val + 1) * 100;
             value_color(&c, val, sino.interval, sino.interval_inv);
             index = (y * 3) + (x * 3) * sino.width;
-            sino.buf[index + 0] = c.r;
-            sino.buf[index + 1] = c.g;
-            sino.buf[index + 2] = c.b;
+            b[index + 0] = c.r;
+            b[index + 1] = c.g;
+            b[index + 2] = c.b;
+            /*if(x == 1 && y == 1){*/
+                /*printf("here\n");*/
+                /*printf("index = %d\t\t b[%d] = %u\n", index, index + 0, c.r);*/
+                /*printf("index = %d\t\t b[%d] = %u\n", index, index + 1, c.g);*/
+                /*printf("index = %d\t\t b[%d] = %u\n", index, index + 2, c.b);*/
+            /*}*/
         }
     }
 
