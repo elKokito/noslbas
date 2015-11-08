@@ -138,7 +138,11 @@ int create_buffer(int width, int height)
      * TODO: initialiser la memoire requise avec clCreateBuffer()
      */
     cl_int ret = 0;
-    goto error;
+    //output : static cl_mem output = NULL;
+    output = clCreateBuffer(context, CL_MEM_READ_ONLY, width*height, NULL, &ret);
+    if(ret != 0){
+        goto error;
+    }
 done:
     return ret;
 error:
@@ -209,6 +213,8 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
      *
      *       Utilisez ERR_THROW partout pour gerer systematiquement les exceptions
      */
+
+    opencl_init(ptr->width, ptr->height);
 
     cl_int ret = 0;
     cl_event ev;
