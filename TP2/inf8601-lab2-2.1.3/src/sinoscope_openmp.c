@@ -50,20 +50,12 @@ int sinoscope_image_openmp(sinoscope_t *ptr)
             s_interval_inv = ptr->interval_inv;
             s_dx = ptr->dx;
             s_dy = ptr->dy;
-            /*struct rgb c;*/
-            /*int index, taylor;*/
-            /*float val, px, py;*/
-            /*int s_taylor = ptr->taylor;*/
-            /*float s_time = ptr->time;*/
-            /*float s_phase0 = ptr->phase0;*/
-            /*float s_phase1 = ptr->phase1;*/
-            /*int s_interval = ptr->interval;*/
-            /*float s_interval_inv = ptr->interval_inv;*/
             px = s_dx * y - 2 * M_PI;
             py = s_dy * x - 2 * M_PI;
             val = 0.0f;
             for (taylor = 1; taylor <= s_taylor; taylor += 2) {
-                val += sin(px * taylor * s_phase1 + s_time) / taylor + cos(py * taylor * s_phase0) / taylor;
+                /*val += sin(px * taylor * s_phase1 + s_time) / taylor + cos(py * taylor * s_phase0) / taylor;*/
+                val += (sin(px * taylor * s_phase1 + s_time) + cos(py * taylor * s_phase0)) / taylor;
             }
             val = (atan(1.0 * val) - atan(-1.0 * val)) / (M_PI);
             val = (val + 1) * 100;
