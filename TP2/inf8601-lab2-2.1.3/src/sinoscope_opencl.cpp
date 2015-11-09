@@ -34,6 +34,8 @@ static cl_kernel kernel = NULL;
  * TODO: Declarer un espace memoire pour le rendu de l'image de type cl_mem
  */
 static cl_mem output = NULL;
+static cl_mem kernel_sinoscope_struct = NULL;
+static size_t outputSize = 0;
 
 int get_opencl_queue()
 {
@@ -138,8 +140,10 @@ int create_buffer(int width, int height)
      * TODO: initialiser la memoire requise avec clCreateBuffer()
      */
     cl_int ret = 0;
-    //output : static cl_mem output = NULL;
-    output = clCreateBuffer(context, CL_MEM_READ_ONLY, width*height, NULL, &ret);
+    outputSize = sizeof(unsigned char)*width*3*height;
+    output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, outputSize, NULL, &ret);
+    kernel_sinoscope_struct = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(sinoscope_t), NULL, &ret);
+
     if(ret != 0){
         goto error;
     }
@@ -185,15 +189,28 @@ error:
 void opencl_shutdown()
 {
     if (queue) 	clReleaseCommandQueue(queue);
-    if (context)	clReleaseContext(context);
+    if (context)clReleaseContext(context);
 
     /*
      * TODO: liberer les ressources allouees
      */
+	cl_int ret = 0;
+	if (prog) ret |= clReleaseProgram(prog);
+	if (kernel) ret |= clReleaseKernel(kernel);
+	if (output) ret |= clReleaseMemObject(output);
+	if (kernel_sinoscope_struct) ret |= clReleaseMemObject(kernel_sinoscope_struct);
+
+	if (ret != CL_SUCCESS)
+		cout << "Encountered problem while releasing OpenCL resources." << endl;
+	else
+		cout << "Released OpenCL resources successfully." << endl;
 }
 
 int sinoscope_image_opencl(sinoscope_t *ptr)
 {
+    cl_event ev;
+	cl_int ret = 0;
+	size_t work_size[] = { ((size_t)ptr->width-1)*sizeof(int)}; // Check if 
     //TODO("sinoscope_image_opencl");
     /*
      * TODO: Executer le noyau avec la fonction run_kernel().
@@ -201,23 +218,31 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
      *       1. Passer les arguments au noyau avec clSetKernelArg(). Si des
      *          arguments sont passees par un tampon, copier les valeurs avec
      *          clEnqueueWriteBuffer() de maniere synchrone.
-     *
-     *       2. Appeller le noyau avec clEnqueueNDRangeKernel(). L'argument
+     */
+	clSetKernelArg(kernel, 0, sizeof(cl_mem), &output);	
+	clSetKernelArg(kernel, 1, sizeof(cl_mem), &kernel_sinoscope_struct);	
+    ERR_THROW(CL_SUCCESS, ret, "ERROR SET KERNEL ARG");
+
+     /*       2. Appeller le noyau avec clEnqueueNDRangeKernel(). L'argument
      *          work_dim de clEnqueueNDRangeKernel() est un tableau size_t
      *          avec les dimensions width et height.
-     *
-     *       3. Attendre que le noyau termine avec clFinish()
-     *
-     *       4. Copier le resultat dans la structure sinoscope_t avec
-     *          clEnqueueReadBuffer() de maniere synchrone
-     *
-     *       Utilisez ERR_THROW partout pour gerer systematiquement les exceptions
      */
+	clEnqueueNDRangeKernel(queue, kernel, 1 , NULL, work_size, NULL, 0, NULL, &ev);
+    ERR_THROW(CL_SUCCESS, ret, "ERROR ENQUEUE RANGE KERNEL");
 
-    opencl_init(ptr->width, ptr->height);
+     /*       3. Attendre que le noyau termine avec clFinish()
+     */
+	ret = clFinish(queue);
+    ERR_THROW(CL_SUCCESS, ret, "ERROR WHILE FINISHING QUEUE");
 
-    cl_int ret = 0;
-    cl_event ev;
+     /*       4. Copier le resultat dans la structure sinoscope_t avec
+     *          clEnqueueReadBuffer() de maniere synchrone
+     */
+	ret = clEnqueueReadBuffer(queue, output, CL_TRUE, 0, outputSize, ptr->buf, 0, NULL, &ev);
+    ERR_THROW(CL_SUCCESS, ret, "ERROR GETTING BACK OUTPUT");
+     
+/*       Utilisez ERR_THROW partout pour gerer systematiquement les exceptions
+     */
 
     if (ptr == NULL)
         goto error;
@@ -226,5 +251,5 @@ done:
     return ret;
 error:
     ret = -1;
-    goto done;
+    return ret;
 }

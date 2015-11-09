@@ -86,7 +86,43 @@ void value_color(struct rgb *color, float value, int interval, float interval_in
 	*color = c;
 }
 
-__kernel void sinoscope_kernel()
+__kernel void sinoscope_kernel(__global unsigned char* output, __global struct sinoscope* sino)
 {
-	// TODO
+	int x = get_global_id(0);
+	int y;
+	int index;
+        //for(y = 1; y < sino->height; ++y) {
+        //    index = (y * 3) + (x * 3) * sino->width;
+        //    output[index + 0] = 0;
+        //    output[index + 1] = 0;
+        //    output[index + 2] = 0;
+		/*struct rgb c;
+            int index, taylor;
+            float val, px, py;
+            int s_taylor = ptr->taylor;
+            float s_time = ptr->time;
+            float s_phase0 = ptr->phase0;
+            float s_phase1 = ptr->phase1;
+            int s_interval = ptr->interval;
+            float s_interval_inv = ptr->interval_inv;
+            px = sino.dx * y - 2 * M_PI;
+            py = sino.dy * x - 2 * M_PI;
+            val = 0.0f;
+            for (taylor = 1; taylor <= s_taylor; taylor += 2) {
+                val += sin(px * taylor * s_phase1 + s_time) / taylor + cos(py * taylor * s_phase0) / taylor;
+            }
+            val = (atan(1.0 * val) - atan(-1.0 * val)) / (M_PI);
+            val = (val + 1) * 100;
+            value_color(&c, val, s_interval, s_interval_inv);
+            index = (y * 3) + (x * 3) * s_width;
+            b[index + 0] = c.r;
+            b[index + 1] = c.g;
+            b[index + 2] = c.b;
+            /*if(x == 1 && y == 1){*/
+            /*printf("here\n");*/
+            /*printf("index = %d\t\t b[%d] = %u\n", index, index + 0, c.r);*/
+            /*printf("index = %d\t\t b[%d] = %u\n", index, index + 1, c.g);*/
+            /*printf("index = %d\t\t b[%d] = %u\n", index, index + 2, c.b);*/
+            /*}*/
+        //}
 }
