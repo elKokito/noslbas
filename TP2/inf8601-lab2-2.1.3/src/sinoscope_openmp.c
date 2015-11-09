@@ -29,21 +29,38 @@ int sinoscope_image_openmp(sinoscope_t *ptr)
 
     unsigned char* b = sino.buf;
 
+    struct rgb c;
+    int index, taylor;
+    float val, px, py, s_dx, s_dy;
+    int s_taylor;
+    float s_time;
+    float s_phase0;
+    float s_phase1;
+    int s_interval;
+    float s_interval_inv;
 
-    #pragma omp parallel for private(x, y)
+    #pragma omp parallel for private(x, y, c, index, s_taylor, s_time, s_phase0, s_phase1, s_interval, s_interval_inv, val, px, py, s_dx, s_dy)
     for(x = 1; x < s_width; ++x){
         for(y = 1; y < s_height; ++y) {
-            struct rgb c;
-            int index, taylor;
-            float val, px, py;
-            int s_taylor = ptr->taylor;
-            float s_time = ptr->time;
-            float s_phase0 = ptr->phase0;
-            float s_phase1 = ptr->phase1;
-            int s_interval = ptr->interval;
-            float s_interval_inv = ptr->interval_inv;
-            px = sino.dx * y - 2 * M_PI;
-            py = sino.dy * x - 2 * M_PI;
+            s_taylor = ptr->taylor;
+            s_time = ptr->time;
+            s_phase0 = ptr->phase0;
+            s_phase1 = ptr->phase1;
+            s_interval = ptr->interval;
+            s_interval_inv = ptr->interval_inv;
+            s_dx = ptr->dx;
+            s_dy = ptr->dy;
+            /*struct rgb c;*/
+            /*int index, taylor;*/
+            /*float val, px, py;*/
+            /*int s_taylor = ptr->taylor;*/
+            /*float s_time = ptr->time;*/
+            /*float s_phase0 = ptr->phase0;*/
+            /*float s_phase1 = ptr->phase1;*/
+            /*int s_interval = ptr->interval;*/
+            /*float s_interval_inv = ptr->interval_inv;*/
+            px = s_dx * y - 2 * M_PI;
+            py = s_dy * x - 2 * M_PI;
             val = 0.0f;
             for (taylor = 1; taylor <= s_taylor; taylor += 2) {
                 val += sin(px * taylor * s_phase1 + s_time) / taylor + cos(py * taylor * s_phase0) / taylor;
@@ -52,9 +69,12 @@ int sinoscope_image_openmp(sinoscope_t *ptr)
             val = (val + 1) * 100;
             value_color(&c, val, s_interval, s_interval_inv);
             index = (y * 3) + (x * 3) * s_width;
-            b[index + 0] = c.r;
-            b[index + 1] = c.g;
-            b[index + 2] = c.b;
+            #pragma omp critical
+            {
+                b[index + 0] = c.r;
+                b[index + 1] = c.g;
+                b[index + 2] = c.b;
+            }
             /*if(x == 1 && y == 1){*/
             /*printf("here\n");*/
             /*printf("index = %d\t\t b[%d] = %u\n", index, index + 0, c.r);*/
