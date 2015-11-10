@@ -205,11 +205,9 @@ void opencl_shutdown()
 
 int sinoscope_image_opencl(sinoscope_t *ptr)
 {
-	static bool test = false;
     	cl_event ev;
 	cl_int ret = 0;
 	size_t work_size[] = { ptr->width, ptr->height};
-    //TODO("sinoscope_image_opencl");
     /*
      * TODO: Executer le noyau avec la fonction run_kernel().
      *
@@ -217,13 +215,17 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
      *          arguments sont passees par un tampon, copier les valeurs avec
      *          clEnqueueWriteBuffer() de maniere synchrone.
      */
-    	cl_mem kernel_sinoscope_struct = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(sinoscope_t), NULL, &ret);
-	ret = clEnqueueWriteBuffer(queue,kernel_sinoscope_struct,CL_FALSE,0,sizeof(sinoscope_t),ptr,0,NULL,&ev);
-
-	clSetKernelArg(kernel, 0, sizeof(cl_mem), &output);	
-	clSetKernelArg(kernel, 1, sizeof(cl_mem), &kernel_sinoscope_struct);	
-	clSetKernelArg(kernel, 2, sizeof(int), &ptr->width);	
-
+	ret |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &output);	
+	ret |= clSetKernelArg(kernel, 1, sizeof(int), &ptr->width);	
+	ret |= clSetKernelArg(kernel, 2, sizeof(int), &ptr->height);	
+	ret |= clSetKernelArg(kernel, 3, sizeof(int), &ptr->interval);	
+	ret |= clSetKernelArg(kernel, 4, sizeof(int), &ptr->taylor);	
+	ret |= clSetKernelArg(kernel, 5, sizeof(float), &ptr->interval_inv);	
+	ret |= clSetKernelArg(kernel, 6, sizeof(float), &ptr->time);	
+	ret |= clSetKernelArg(kernel, 7, sizeof(float), &ptr->phase0);	
+	ret |= clSetKernelArg(kernel, 8, sizeof(float), &ptr->phase1);	
+	ret |= clSetKernelArg(kernel, 9, sizeof(float), &ptr->dx);	
+	ret |= clSetKernelArg(kernel, 10, sizeof(float), &ptr->dy);	
     	ERR_THROW(CL_SUCCESS, ret, "ERROR SET KERNEL ARG");
 
      /*       2. Appeller le noyau avec clEnqueueNDRangeKernel(). L'argument
@@ -244,18 +246,6 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
 	ret = clEnqueueReadBuffer(queue, output, CL_TRUE, 0, outputSize, ptr->buf, 0, NULL, &ev);
     	ERR_THROW(CL_SUCCESS, ret, "ERROR GETTING BACK OUTPUT");
      
-	if (!test)
-	{	
-		cout << "Expected width : " << ptr->width << endl;
-		cout << "Expected height : " << ptr->height << endl;
-		for (int i = 0; i < ptr->width; ++i)
-		{
-			cout << (unsigned int)ptr->buf[i] << " - ";
-		}
-		test = true;	
-	}
-	ret = clReleaseMemObject(kernel_sinoscope_struct);
-
     if (ptr == NULL)
         goto error;
 
