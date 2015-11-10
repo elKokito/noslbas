@@ -34,9 +34,7 @@ static cl_kernel kernel = NULL;
  * TODO: Declarer un espace memoire pour le rendu de l'image de type cl_mem
  */
 static cl_mem output = NULL;
-static cl_mem kernel_sinoscope_struct = NULL;
-static size_t outputSize = 0;
-static size_t sinoscopeSize = sizeof(sinoscope_t);
+size_t outputSize = 0;
 
 int get_opencl_queue()
 {
@@ -143,7 +141,6 @@ int create_buffer(int width, int height)
     cl_int ret = 0;
     outputSize = sizeof(unsigned char)*width*3*height;
     output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, outputSize, NULL, &ret);
-    kernel_sinoscope_struct = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(sinoscope_t), NULL, &ret);
 
     if(ret != 0){
         goto error;
@@ -199,7 +196,6 @@ void opencl_shutdown()
 	if (prog) ret |= clReleaseProgram(prog);
 	if (kernel) ret |= clReleaseKernel(kernel);
 	if (output) ret |= clReleaseMemObject(output);
-	if (kernel_sinoscope_struct) ret |= clReleaseMemObject(kernel_sinoscope_struct);
 
 	if (ret != CL_SUCCESS)
 		cout << "Encountered problem while releasing OpenCL resources." << endl;
@@ -221,9 +217,12 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
      *          arguments sont passees par un tampon, copier les valeurs avec
      *          clEnqueueWriteBuffer() de maniere synchrone.
      */
+    	cl_mem kernel_sinoscope_struct = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(sinoscope_t), NULL, &ret);
+	ret = clEnqueueWriteBuffer(queue,kernel_sinoscope_struct,CL_FALSE,0,sizeof(sinoscope_t),ptr,0,NULL,&ev);
+
 	clSetKernelArg(kernel, 0, sizeof(cl_mem), &output);	
 	clSetKernelArg(kernel, 1, sizeof(cl_mem), &kernel_sinoscope_struct);	
-	ret = clEnqueueWriteBuffer(queue,kernel_sinoscope_struct,CL_FALSE,0,sinoscopeSize,ptr,0,NULL,&ev);
+
     	ERR_THROW(CL_SUCCESS, ret, "ERROR SET KERNEL ARG");
 
      /*       2. Appeller le noyau avec clEnqueueNDRangeKernel(). L'argument
@@ -248,12 +247,13 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
 	{	
 		cout << "Expected width : " << ptr->width << endl;
 		cout << "Expected height : " << ptr->height << endl;
-		/*for (int i = 0; i <= ptr->width; ++i)
+		for (int i = 0; i < ptr->width; ++i)
 		{
 			cout << (unsigned int)ptr->buf[i] << " - ";
-		}*/
+		}
 		test = true;	
 	}
+	ret = clReleaseMemObject(kernel_sinoscope_struct);
 
     if (ptr == NULL)
         goto error;
