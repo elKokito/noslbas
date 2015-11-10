@@ -36,6 +36,7 @@ static cl_kernel kernel = NULL;
 static cl_mem output = NULL;
 static cl_mem kernel_sinoscope_struct = NULL;
 static size_t outputSize = 0;
+static size_t sinoscopeSize = sizeof(sinoscope_t);
 
 int get_opencl_queue()
 {
@@ -208,9 +209,10 @@ void opencl_shutdown()
 
 int sinoscope_image_opencl(sinoscope_t *ptr)
 {
-    cl_event ev;
+	static bool test = false;
+    	cl_event ev;
 	cl_int ret = 0;
-	size_t work_size[] = { ((size_t)ptr->width-1)*sizeof(int)}; // Check if 
+	size_t work_size[] = { ptr->width*sizeof(int)};
     //TODO("sinoscope_image_opencl");
     /*
      * TODO: Executer le noyau avec la fonction run_kernel().
@@ -221,28 +223,37 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
      */
 	clSetKernelArg(kernel, 0, sizeof(cl_mem), &output);	
 	clSetKernelArg(kernel, 1, sizeof(cl_mem), &kernel_sinoscope_struct);	
-    ERR_THROW(CL_SUCCESS, ret, "ERROR SET KERNEL ARG");
+	ret = clEnqueueWriteBuffer(queue,kernel_sinoscope_struct,CL_FALSE,0,sinoscopeSize,ptr,0,NULL,&ev);
+    	ERR_THROW(CL_SUCCESS, ret, "ERROR SET KERNEL ARG");
 
      /*       2. Appeller le noyau avec clEnqueueNDRangeKernel(). L'argument
      *          work_dim de clEnqueueNDRangeKernel() est un tableau size_t
      *          avec les dimensions width et height.
      */
-	clEnqueueNDRangeKernel(queue, kernel, 1 , NULL, work_size, NULL, 0, NULL, &ev);
-    ERR_THROW(CL_SUCCESS, ret, "ERROR ENQUEUE RANGE KERNEL");
+	ret = clEnqueueNDRangeKernel(queue, kernel, 1 , NULL, work_size, NULL, 0, NULL, &ev);
+    	ERR_THROW(CL_SUCCESS, ret, "ERROR ENQUEUE RANGE KERNEL");
 
      /*       3. Attendre que le noyau termine avec clFinish()
      */
 	ret = clFinish(queue);
-    ERR_THROW(CL_SUCCESS, ret, "ERROR WHILE FINISHING QUEUE");
+    	ERR_THROW(CL_SUCCESS, ret, "ERROR WHILE FINISHING QUEUE");
 
      /*       4. Copier le resultat dans la structure sinoscope_t avec
      *          clEnqueueReadBuffer() de maniere synchrone
      */
 	ret = clEnqueueReadBuffer(queue, output, CL_TRUE, 0, outputSize, ptr->buf, 0, NULL, &ev);
-    ERR_THROW(CL_SUCCESS, ret, "ERROR GETTING BACK OUTPUT");
+    	ERR_THROW(CL_SUCCESS, ret, "ERROR GETTING BACK OUTPUT");
      
-/*       Utilisez ERR_THROW partout pour gerer systematiquement les exceptions
-     */
+	if (!test)
+	{	
+		cout << "Expected width : " << ptr->width << endl;
+		cout << "Expected height : " << ptr->height << endl;
+		for (int i = 0; i < ptr->width; ++i)
+		{
+			cout << (unsigned int)ptr->buf[i] << " - ";
+		}
+		test = true;	
+	}
 
     if (ptr == NULL)
         goto error;
