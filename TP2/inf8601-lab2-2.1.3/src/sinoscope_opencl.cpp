@@ -222,6 +222,7 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
 
 	clSetKernelArg(kernel, 0, sizeof(cl_mem), &output);	
 	clSetKernelArg(kernel, 1, sizeof(cl_mem), &kernel_sinoscope_struct);	
+	clSetKernelArg(kernel, 2, sizeof(int), &ptr->width);	
 
     	ERR_THROW(CL_SUCCESS, ret, "ERROR SET KERNEL ARG");
 
