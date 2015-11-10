@@ -89,9 +89,21 @@ void value_color(struct rgb *color, float value, int interval, float interval_in
 __kernel void sinoscope_kernel(__global unsigned char* output, __global struct sinoscope* sino)
 {
 	int x = get_global_id(0);
-	int y;
-	int index;
-        //for(y = 1; y < sino->height; ++y) {
+	int y = get_global_id(1);
+	int index = (y * 3) + (x * 3) * 512;
+	/*if (x >255)
+	{
+		output[x] = (unsigned char)0;
+        }
+	else
+	{
+		output[x] = (unsigned char)1;
+	}*/ 
+	output[index] = (unsigned char)255;
+	output[index+1] = (unsigned char)255;
+	output[index+2] = (unsigned char)255;
+	
+	//for(y = 1; y < sino->height; ++y) {
         //    index = (y * 3) + (x * 3) * sino->width;
         //    output[index + 0] = 0;
         //    output[index + 1] = 0;

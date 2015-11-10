@@ -212,7 +212,7 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
 	static bool test = false;
     	cl_event ev;
 	cl_int ret = 0;
-	size_t work_size[] = { ptr->width*sizeof(int)};
+	size_t work_size[] = { ptr->width, ptr->height};
     //TODO("sinoscope_image_opencl");
     /*
      * TODO: Executer le noyau avec la fonction run_kernel().
@@ -230,7 +230,7 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
      *          work_dim de clEnqueueNDRangeKernel() est un tableau size_t
      *          avec les dimensions width et height.
      */
-	ret = clEnqueueNDRangeKernel(queue, kernel, 1 , NULL, work_size, NULL, 0, NULL, &ev);
+	ret = clEnqueueNDRangeKernel(queue, kernel, 2 , NULL, work_size, NULL, 0, NULL, &ev);
     	ERR_THROW(CL_SUCCESS, ret, "ERROR ENQUEUE RANGE KERNEL");
 
      /*       3. Attendre que le noyau termine avec clFinish()
@@ -248,10 +248,10 @@ int sinoscope_image_opencl(sinoscope_t *ptr)
 	{	
 		cout << "Expected width : " << ptr->width << endl;
 		cout << "Expected height : " << ptr->height << endl;
-		for (int i = 0; i < ptr->width; ++i)
+		/*for (int i = 0; i <= ptr->width; ++i)
 		{
 			cout << (unsigned int)ptr->buf[i] << " - ";
-		}
+		}*/
 		test = true;	
 	}
 
