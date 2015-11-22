@@ -1,0 +1,16 @@
+*.cache
+*.log
+*.status
+*.0
+*.deps/
+*Makefile
+*.o
+*.a
+*out-*
+*mpi?
+*.odt#
+*exchng
+*heatsim
+*libtool
+*stamp-h1
+*config.h
