@@ -256,8 +256,8 @@ void exchng1d_async(ctx_t *ctx) {
 
 	int *offset_send_1 = data + (row_end - 2) * width;
 	int *offset_send_2 = data + (row_start + 1) * width;
-	MPI_Isend(offset_send_1, width, MPI_INTEGER, south, 0, comm1d, &req[3]);
-	MPI_Isend(offset_send_2, width, MPI_INTEGER, north, 1, comm1d, &req[2]);
+	MPI_Isend(offset_send_1, width, MPI_INTEGER, south, 1, comm1d, &req[3]);
+	MPI_Isend(offset_send_2, width, MPI_INTEGER, north, 0, comm1d, &req[2]);
 
 	MPI_Waitall(4, req, status);
 

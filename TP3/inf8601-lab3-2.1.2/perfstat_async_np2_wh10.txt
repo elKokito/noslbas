@@ -1,0 +1,16 @@
+
+ Performance counter stats for 'mpirun -np 2 ./src/exchng --lib async --width 10 --height 10 -v' (10 runs):
+
+         27.661519      task-clock (msec)         #    1.565 CPUs utilized            ( +-  5.40% )
+                77      context-switches          #    0.003 M/sec                    ( +-  4.82% )
+                13      cpu-migrations            #    0.470 K/sec                    ( +- 11.29% )
+             1,196      page-faults               #    0.043 M/sec                    ( +-  1.05% )
+        61,129,735      cycles                    #    2.210 GHz                      ( +-  6.12% )
+                 0      stalled-cycles-frontend   #    0.00% frontend cycles idle   
+                 0      stalled-cycles-backend    #    0.00% backend  cycles idle   
+        78,421,071      instructions              #    1.28  insns per cycle          ( +-  5.48% )
+        17,481,169      branches                  #  631.967 M/sec                    ( +-  7.47% )
+           111,845      branch-misses             #    0.64% of all branches          ( +-  1.60% )
+
+       0.017670897 seconds time elapsed                                          ( +-  7.35% )
+

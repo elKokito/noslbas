@@ -1,0 +1,8 @@
+instructions : combined meilleur mais async vraiment pas loin (combined et blocking on le nombre d'instructions par cycle égale et meilleur)
+branch-misses: async
+cycles:ordered-(async-combined pas mal semblable)
+cache-miss: combined avec buffered pas loin
+task-clock:ordered-combined (pas loin)
+elapsed time:ordered-combined(pas loin)
+
+

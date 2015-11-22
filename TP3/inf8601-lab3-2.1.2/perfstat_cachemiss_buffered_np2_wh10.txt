@@ -1,0 +1,7 @@
+
+ Performance counter stats for 'mpirun -np 2 ./src/exchng --lib buffered --width 10 --height 10 -v' (10 runs):
+
+            63,629      cache-misses                                                  ( +-  4.48% )
+
+       0.022834639 seconds time elapsed                                          ( +-  4.66% )
+
