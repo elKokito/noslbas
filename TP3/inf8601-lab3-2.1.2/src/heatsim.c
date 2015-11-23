@@ -289,16 +289,60 @@ void exchng2d(ctx_t *ctx) {
 	 *  FIXME: Echanger les bordures avec les voisins
 	 * 4 echanges doivent etre effectues
 	 */
-	TODO("lab3");
+	
+	//TODO("lab3");
+	// TODO : Figure c'est quoi le but des MPI_Datatype (vector n shit)
+	// row_end et row_start sont affecté via les rank dans decomp1d dans l'Exemple exchng
+	// l'affectation doit se faire dans init, mais comme on y accède ici
+	grid_t *grid = ctx->next_grid;
+	int width = grid->pw;
+	int height = grid->ph;
+	int *data = grid->data;
+	MPI_Comm comm = ctx->comm2d;
+	MPI_Request req[8];
+	MPI_Status status[8];
+
+	// Peer ids
+	int south = ctx->south_peer,
+	    north = ctx->north_peer,
+	    west  = ctx->west_peer,
+	    east  = ctx->east_peer;
+	 
+ 	// Exchange north->south
+ 	/*int *offset_send = data + (row_end - 2) * width;
+	int *offset_recv = data + row_start * width;
+	MPI_Sendrecv(offset_send, width, MPI_INTEGER, south, 0, offset_recv, width, MPI_INTEGER, north, 0, comm1d, &status);
+	if (ctx->verbose) {
+		fprintf(ctx->log, "after exchange north->south\n");
+		fprint_matrix(data, width, row_start, row_end, ctx->log);
+	}*/
 	/*
-	 grid_t *grid = ctx->next_grid;
-	 int width = grid->pw;
-	 int height = grid->ph;
-	 int *data = grid->data;
-	 MPI_Comm comm = ctx->comm2d;
-	 MPI_Request req[8];
-	 MPI_Status status[8];
-	 */
+ 	// Exchange south->north
+ 	int *offset_send = data + (row_end - 2) * width;
+	int *offset_recv = data + row_start * width;
+	MPI_Sendrecv(offset_send, width, MPI_INTEGER, north, 0, offset_recv, width, MPI_INTEGER, south, 0, comm1d, &status);
+	if (ctx->verbose) {
+		fprintf(ctx->log, "after exchange south->north\n");
+		fprint_matrix(data, width, row_start, row_end, ctx->log);
+	}*/
+	/*
+ 	// Exchange east->west
+ 	int *offset_send = data + (row_end - 2) * width;
+	int *offset_recv = data + row_start * width;
+	MPI_Sendrecv(offset_send, width, MPI_INTEGER, west, 0, offset_recv, width, MPI_INTEGER, east, 0, comm1d, &status);
+	if (ctx->verbose) {
+		fprintf(ctx->log, "after exchange east->west\n");
+		fprint_matrix(data, width, row_start, row_end, ctx->log);
+	}*/
+	/*
+ 	// Exchange west->east
+ 	int *offset_send = data + (row_end - 2) * width;
+	int *offset_recv = data + row_start * width;
+	MPI_Sendrecv(offset_send, width, MPI_INTEGER, east, 0, offset_recv, width, MPI_INTEGER, west, 0, comm1d, &status);
+	if (ctx->verbose) {
+		fprintf(ctx->log, "after exchange west->east\n");
+		fprint_matrix(data, width, row_start, row_end, ctx->log);
+	}*/
 }
 
 int gather_result(ctx_t *ctx, opts_t *opts) {
