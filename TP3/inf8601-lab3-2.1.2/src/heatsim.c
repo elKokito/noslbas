@@ -214,11 +214,13 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
 	grid_t *new_grid = NULL;
 
 	/* FIXME: create 2D cartesian communicator */
-	/* From exchng
-     * create 1D cartesian communicator */
 	MPI_Cart_create(MPI_COMM_WORLD, DIM_2D, ctx->dims, ctx->isperiodic, ctx->reorder, &ctx->comm2d);
-	//MPI_Cart_shift(ctx->comm1d, 0, 1, &ctx->north, &ctx->south);
-	//MPI_Cart_coords(ctx->comm1d, ctx->rank, DIM_1D, ctx->coords);
+
+    MPI_Cart_shift(ctx->comm2d, 0, 1, &ctx->north_peer, &ctx->south_peer);
+    // maybe west -> east
+    MPI_Cart_shift(ctx->comm2d, 0, 1, &ctx->east_peer, &ctx->west_peer);
+
+    MPI_Cart_coords(ctx->comm2d, ctx->rank, DIM_2D, ctx->coords);
 	/*
 	 * FIXME: le processus rank=0 charge l'image du disque
 	 * et transfert chaque section aux autres processus
@@ -273,6 +275,7 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
 
 	return 0;
 	err: return -1;
+
 }
 
 void dump_ctx(ctx_t *ctx) {
