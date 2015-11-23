@@ -196,7 +196,6 @@ void free_ctx(ctx_t *ctx) {
 }
 
 int init_ctx(ctx_t *ctx, opts_t *opts) {
-	TODO("lab3");
 	MPI_Comm_size(MPI_COMM_WORLD, &ctx->numprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &ctx->rank);
 
@@ -215,11 +214,23 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
 	grid_t *new_grid = NULL;
 
 	/* FIXME: create 2D cartesian communicator */
-
+	/* From exchng
+     * create 1D cartesian communicator */
+	MPI_Cart_create(MPI_COMM_WORLD, DIM_2D, ctx->dims, ctx->isperiodic, ctx->reorder, &ctx->comm2d);
+	//MPI_Cart_shift(ctx->comm1d, 0, 1, &ctx->north, &ctx->south);
+	//MPI_Cart_coords(ctx->comm1d, ctx->rank, DIM_1D, ctx->coords);
 	/*
 	 * FIXME: le processus rank=0 charge l'image du disque
 	 * et transfert chaque section aux autres processus
 	 */
+    if (ctx->rank == 0)
+    {    
+        //TODO:
+        // WUT THE FuCK, quel image? l'image loadé en dessous? pi quel sections??
+        /* du scratchpad
+         * Communiquer la variable du maitre à tous les autres processus */
+        //MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    }
 
 	/* load input image */
 	image_t *image = load_png(opts->input);
