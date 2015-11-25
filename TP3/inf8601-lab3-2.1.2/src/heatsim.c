@@ -395,19 +395,18 @@ void exchng2d(ctx_t *ctx) {
     }
     
     // Column exchange
-    // Holy fuck, pass column mate - use vector
     // Exchange east->west
-    offset_send = data + row_start + (width - 1);
-    offset_recv = data + row_start;
-    MPI_Sendrecv(data+, 1, ctx->vector, west, 0, offset_recv, 1, ctx->vector, east, 0, ctx->comm2d, &status[2]);
+    offset_send = data + row_start;
+    offset_recv = data + row_start + (width - 1);
+    MPI_Sendrecv(offset_send, 1, ctx->vector, west, 0, offset_recv, 1, ctx->vector, east, 0, ctx->comm2d, &status[2]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange east->west\n");
         //fprint_matrix(data, , row_start, row_end, ctx->log);
     }
     
     // Exchange west->east
-    offset_send = data + row_start + (width - 1);
-    offset_recv = data + row_start;
+    offset_send = data + row_start + (width - 2);
+    offset_recv = data + row_start + 1;
     MPI_Sendrecv(offset_send, 1 , ctx->vector, east, 0, offset_recv, 1, ctx->vector, west, 0, ctx->comm2d, &status[3]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange west->east\n");
