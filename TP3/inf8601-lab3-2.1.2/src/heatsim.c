@@ -368,17 +368,10 @@ void exchng2d(ctx_t *ctx) {
         west  = ctx->west_peer,
         east  = ctx->east_peer;
 
-    // TODO: 
-    // 1- ENLEVER LE RANK DU CALCUL ET JUSTE SE SERVIR DU HEIGHT
-    // 2- Figurer les offsets et les échanges nécessaires
-    int size = width * height,
-        row_start = size * ctx->rank / ctx->numprocs,
-        row_end   = (size * (ctx->rank + 1)) / ctx->numprocs;
-
     // Row exchange
     // Exchange north->south
-    int *offset_send = data + (row_end - 2) * width;
-    int *offset_recv = data + row_start * width;
+    int *offset_send = data + (height - 2) * width;
+    int *offset_recv = data;
     MPI_Sendrecv(offset_send, width, MPI_INTEGER, south, 0, offset_recv, width, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange north->south\n");
@@ -386,8 +379,8 @@ void exchng2d(ctx_t *ctx) {
     }
     
     // Exchange south->north
-	offset_send = data + (row_start + 1) * width;
-	offset_recv = data + (row_end - 1) * width;
+	offset_send = data + width;
+	offset_recv = data + (height - 1) * width;
     MPI_Sendrecv(offset_send, width, MPI_INTEGER, north, 0, offset_recv, width, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange south->north\n");
@@ -396,8 +389,8 @@ void exchng2d(ctx_t *ctx) {
     
     // Column exchange
     // Exchange east->west
-    offset_send = data + row_start;
-    offset_recv = data + row_start + (width - 1);
+    offset_send = data;
+    offset_recv = data + (width - 1);
     MPI_Sendrecv(offset_send, 1, ctx->vector, west, 0, offset_recv, 1, ctx->vector, east, 0, ctx->comm2d, &status[2]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange east->west\n");
@@ -405,8 +398,8 @@ void exchng2d(ctx_t *ctx) {
     }
     
     // Exchange west->east
-    offset_send = data + row_start + (width - 2);
-    offset_recv = data + row_start + 1;
+    offset_send = data + (width - 2);
+    offset_recv = data + 1;
     MPI_Sendrecv(offset_send, 1 , ctx->vector, east, 0, offset_recv, 1, ctx->vector, west, 0, ctx->comm2d, &status[3]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange west->east\n");
