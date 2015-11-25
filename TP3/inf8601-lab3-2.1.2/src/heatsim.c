@@ -256,8 +256,9 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
         // we don't send to rank 0 so we skip i = 0
         /*printf("dimx = %d\n", opts->dimx);*/
         /*printf("dimy = %d\n", opts->dimy);*/
-        for(int i = 0; i < opts->dimx; ++i) {
-            for(int j = 0; j < opts->dimy; ++j) {
+        int i,j;
+        for(i = 0; i < opts->dimx; ++i) {
+            for(j = 0; j < opts->dimy; ++j) {
                 /*
                  * MPI_Send args
                  * const void buf*, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm
@@ -267,7 +268,6 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                 int count = buf->width * buf->height;
                 int dest = i*opts->dimx+j;
                 int tag = 0;
-                MPI_Comm comm = ctx->comm2d;
                 if(dest != 0) {
                     // send size of grid
                     /*printf("rank 0 sending to dest: %d with i = %d,  j = %d\n", dest, i, j);*/
@@ -359,7 +359,6 @@ void exchng2d(ctx_t *ctx) {
     int height = grid->ph;
     int *data = grid->data;
     MPI_Comm comm = ctx->comm2d;
-    MPI_Request req[8];
     MPI_Status status[8];
 
     // Peer ids
@@ -372,7 +371,7 @@ void exchng2d(ctx_t *ctx) {
     // Exchange north->south
     int *offset_send = data + (height - 2) * width;
     int *offset_recv = data;
-    MPI_Sendrecv(offset_send, width, MPI_INTEGER, south, 0, offset_recv, width, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
+    MPI_Sendrecv(offset_send, width, MPI_INTEGER, south, 0, offset_recv, width, MPI_INTEGER, north, 0, comm, &status[0]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange north->south\n");
         //fprint_matrix(data, width, row_start, row_end, ctx->log);
@@ -381,7 +380,7 @@ void exchng2d(ctx_t *ctx) {
     // Exchange south->north
 	offset_send = data + width;
 	offset_recv = data + (height - 1) * width;
-    MPI_Sendrecv(offset_send, width, MPI_INTEGER, north, 0, offset_recv, width, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
+    MPI_Sendrecv(offset_send, width, MPI_INTEGER, north, 0, offset_recv, width, MPI_INTEGER, south, 0, comm, &status[1]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange south->north\n");
         //fprint_matrix(data, width, row_start, row_end, ctx->log);
@@ -391,7 +390,7 @@ void exchng2d(ctx_t *ctx) {
     // Exchange east->west
     offset_send = data;
     offset_recv = data + (width - 1);
-    MPI_Sendrecv(offset_send, 1, ctx->vector, west, 0, offset_recv, 1, ctx->vector, east, 0, ctx->comm2d, &status[2]);
+    MPI_Sendrecv(offset_send, 1, ctx->vector, west, 0, offset_recv, 1, ctx->vector, east, 0, comm, &status[2]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange east->west\n");
         //fprint_matrix(data, , row_start, row_end, ctx->log);
@@ -400,7 +399,7 @@ void exchng2d(ctx_t *ctx) {
     // Exchange west->east
     offset_send = data + (width - 2);
     offset_recv = data + 1;
-    MPI_Sendrecv(offset_send, 1 , ctx->vector, east, 0, offset_recv, 1, ctx->vector, west, 0, ctx->comm2d, &status[3]);
+    MPI_Sendrecv(offset_send, 1 , ctx->vector, east, 0, offset_recv, 1, ctx->vector, west, 0, comm, &status[3]);
     if (ctx->verbose) {
         fprintf(ctx->log, "after exchange west->east\n");
         //fprint_matrix(data, width, row_start, row_end, ctx->log);
