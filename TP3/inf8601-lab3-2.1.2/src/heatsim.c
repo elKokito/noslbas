@@ -251,14 +251,15 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
          * Comment traiter le cas de rank=0 ?
          */
         // we don't send to rank 0 so we skip i = 0
-        for(int i = 0; i < ctx->cart->width; ++i) {
-            for(int j = 0; j < ctx->cart->height; ++j) {
+        for(int i = 0; i < opts->dimx; ++i) {
+            for(int j = 0; j < opts->dimy; ++j) {
                 /*
                  * MPI_Send args
                  * const void buf*, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm
                  */
                 grid_t *buf = ctx->cart->grids[IX2(i, j, ctx->cart->block_x)];
-                int count = buf->width + buf->height;
+                /*int count = ctx->cart->dims[i][j];*/
+                int count = buf->width * buf->height;
                 int dest = i+j;
                 int tag = 0;
                 MPI_Comm comm = ctx->comm2d;
@@ -268,11 +269,6 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                     MPI_Send(&count, 1, MPI_INT, dest, tag, comm);
                     // send grid
                     MPI_Send(buf->data, count, MPI_INT, dest, tag, comm);
-                    // send size of heat grid
-                    count = ctx->heat_grid->width + ctx->heat_grid->height;
-                    MPI_Send(&count, 1, MPI_INT, dest, tag, comm);
-                    // send heat_grid
-                    MPI_Send(ctx->heat_grid->data, count, MPI_INT, dest, tag, comm);
                 }
             }
         }
@@ -284,19 +280,15 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
         // receive grid ???
         /*MPI_Recv(ctx->current_grid, count, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);*/
         MPI_Recv(ctx->global_grid, count, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // receive heat_grid size
-        MPI_Recv(&count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // receive heat_grid
-        MPI_Recv(ctx->heat_grid, count, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        /*
+         * FIXME: receive dimensions of the grid
+         * store into new_grid
+         */
+
+        /* Utilisation temporaire de global_grid */
     }
-    /*
-     * FIXME: receive dimensions of the grid
-     * store into new_grid
-     */
 
-    /* Utilisation temporaire de global_grid */
     new_grid = ctx->global_grid;
-
     if (new_grid == NULL)
         goto err;
     /* set padding required for Runge-Kutta */
