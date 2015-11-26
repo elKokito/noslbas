@@ -284,6 +284,9 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                     /*printf("MPI_Send buffer ctx->cart->grids[IX2(%d, %d, %d)]\n", i, j, ctx->cart->block_x);*/
                     MPI_Send(buf->data, count, MPI_INT, dest, tag, ctx->comm2d);
                 }
+                else {
+                    ctx->global_grid = ctx->cart->grids[IX2(0, 0, 0)];
+                }
             }
         }
     }
@@ -385,30 +388,38 @@ void exchng2d(ctx_t *ctx) {
     }
 
     // dirty has hell
-    int *recv1 = (int *) calloc(grid->width * grid->height, sizeof(int));
-    int *recv2 = (int *) calloc(grid->width * grid->height, sizeof(int));
-    int *recv3 = (int *) calloc(grid->width * grid->height, sizeof(int));
-    int *recv4 = (int *) calloc(grid->width * grid->height, sizeof(int));
+    int *recv1 = (int *) calloc(grid->width, sizeof(int));
+    int *recv2 = (int *) calloc(grid->width, sizeof(int));
+    int *recv3 = (int *) calloc(grid->height, sizeof(int));
+    int *recv4 = (int *) calloc(grid->height, sizeof(int));
 
+    /* TODO
+     * get rid of useless locally created buffers (recv1, ...)
+     */
     // north->south
-    if(ctx->rank % 2 == 0)
-    printf("rank %d, pid %d size to send %d to %d, receiving from %d size %d\n", ctx->rank, getpid(), width, south, north, width);
-    MPI_Sendrecv(south_border, width, MPI_INTEGER, south, 0, recv1, width*height, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
+    MPI_Sendrecv(south_border, width, MPI_INTEGER, south, 0, data, width, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
 
     // south->nort
-    if(ctx->rank % 2 == 0)
-    printf("rank %d, pid %d size to send %d to %d, receiving from %d size %d\n", ctx->rank, getpid(), width, north, south, width);
-    MPI_Sendrecv(north_border, width, MPI_INTEGER, north, 0, recv2, width*height, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
+    MPI_Sendrecv(north_border, width, MPI_INTEGER, north, 0, data + width*(height-1), width, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
 
+    /* TODO
+     * recv3, recv4 have 'width' size of receize should be height but cause crash
+     * might be because source and destination are incorrect
+     */
     // east->west
-    if(ctx->rank % 2 == 0)
-    printf("rank %d, pid %d size to send %d to %d, receiving from %d size %d\n", ctx->rank, getpid(), height, west, east, height);
-    MPI_Sendrecv(west_border, height, MPI_INTEGER, west, 0, recv3, height*width, MPI_INTEGER, east, 0, ctx->comm2d, &status[2]);
+    MPI_Sendrecv(west_border, height, MPI_INTEGER, west, 0, recv3, width, MPI_INTEGER, east, 0, ctx->comm2d, &status[2]);
 
     // west->east
-    if(ctx->rank % 2 == 0)
-    printf("rank %d, pid %d size to send %d to %d, receiving from %d size %d\n", ctx->rank, getpid(), height, east, west, height);
-    MPI_Sendrecv(east_border, height, MPI_INTEGER, south, 0, recv4, height*width, MPI_INTEGER, west, 0, ctx->comm2d, &status[3]);
+    MPI_Sendrecv(east_border, height, MPI_INTEGER, east, 0, recv4, width, MPI_INTEGER, west, 0, ctx->comm2d, &status[3]);
+
+    free(recv1);
+    free(recv2);
+    free(recv3);
+    free(recv4);
+    free(north_border);
+    free(south_border);
+    free(west_border);
+    free(east_border);
 }
 
 int gather_result(ctx_t *ctx, opts_t *opts) {
