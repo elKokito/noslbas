@@ -216,9 +216,9 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
     /* FIXME: create 2D cartesian communicator */
     MPI_Cart_create(MPI_COMM_WORLD, DIM_2D, ctx->dims, ctx->isperiodic, ctx->reorder, &ctx->comm2d);
 
-    MPI_Cart_shift(ctx->comm2d, 0, 1, &ctx->north_peer, &ctx->south_peer);
+    MPI_Cart_shift(ctx->comm2d, 0, 1, &ctx->south_peer, &ctx->north_peer);
     // maybe west -> east
-    MPI_Cart_shift(ctx->comm2d, 0, 1, &ctx->east_peer, &ctx->west_peer);
+    MPI_Cart_shift(ctx->comm2d, 1, 1, &ctx->west_peer, &ctx->east_peer);
 
     MPI_Cart_coords(ctx->comm2d, ctx->rank, DIM_2D, ctx->coords);
 
@@ -267,22 +267,25 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                 int count = buf->width * buf->height;
                 int dest = i*opts->dimx+j;
                 int tag = 0;
-                MPI_Comm comm = ctx->comm2d;
                 if(dest != 0) {
                     // send size of grid
                     /*printf("rank 0 sending to dest: %d with i = %d,  j = %d\n", dest, i, j);*/
-                    MPI_Send(&buf->width, 1, MPI_INT, dest, tag, MPI_COMM_WORLD);
+                    MPI_Send(&buf->width, 1, MPI_INT, dest, tag, ctx->comm2d);
                     /*printf("MPI_Send width of %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->width, i, j, ctx->cart->block_x);*/
-                    MPI_Send(&buf->height, 1, MPI_INT, dest, tag, MPI_COMM_WORLD);
+                    MPI_Send(&buf->height, 1, MPI_INT, dest, tag, ctx->comm2d);
                     /*printf("MPI_Send height of %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->height, i, j, ctx->cart->block_x);*/
-                    MPI_Send(&buf->padding, 1, MPI_INT, dest, tag, MPI_COMM_WORLD);
+                    MPI_Send(&buf->padding, 1, MPI_INT, dest, tag, ctx->comm2d);
                     /*printf("MPI_Send padding %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->padding, i, j, ctx->cart->block_x);*/
-                    MPI_Send(&count, 1, MPI_INT, dest, tag, MPI_COMM_WORLD);
-                    /*printf("MPI_Send buffer size %d ctx->cart->grids[IX2(%d, %d, %d)]\n", count, i, j, ctx->cart->block_x);*/
+                    MPI_Send(&count, 1, MPI_INT, dest, tag, ctx->comm2d);
+                    printf("MPI_Send buffer size %d ctx->cart->grids[IX2(%d, %d, %d)] dest: %d\n", count, i, j, ctx->cart->block_x, dest);
+                    /*printf("%d\n", MPI_Cart_rank(ctx->comm2d, ctx->coords, &dest));*/
 
                     // send grid
                     /*printf("MPI_Send buffer ctx->cart->grids[IX2(%d, %d, %d)]\n", i, j, ctx->cart->block_x);*/
-                    MPI_Send(buf->data, count, MPI_INT, dest, tag, MPI_COMM_WORLD);
+                    MPI_Send(buf->data, count, MPI_INT, dest, tag, ctx->comm2d);
+                }
+                else {
+                    ctx->global_grid = ctx->cart->grids[IX2(0, 0, 0)];
                 }
             }
         }
@@ -291,21 +294,21 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
         /*printf("ctx_init rank %d with pid: %d\n", ctx->rank, getpid());*/
         int width, height, padding, count;
         // receive size of grid
-        MPI_Recv(&width, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&width, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv width of grid %d in rank %d\n", width, ctx->rank);*/
-        MPI_Recv(&height, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&height, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv height of grid %d in rank %d\n", height, ctx->rank);*/
-        MPI_Recv(&padding, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&padding, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv padding of grid %d in rank %d\n", padding, ctx->rank);*/
-        MPI_Recv(&count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&count, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv size of grid %d in rank %d\n", count, ctx->rank);*/
 
-        /*MPI_Recv(ctx->current_grid, count, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);*/
+        /*MPI_Recv(ctx->current_grid, count, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);*/
         // need to allocate memory for received grid
         /*printf("allocate memory for grid in rank %d\n", ctx->rank);*/
         ctx->global_grid = make_grid(width, height, padding);
         /*printf("MPI_Recv grid in rank %d\n", ctx->rank);*/
-        MPI_Recv(ctx->global_grid->data, count, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(ctx->global_grid->data, count, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv grid received in rank %d\n", ctx->rank);*/
         /*
          * FIXME: receive dimensions of the grid
@@ -319,15 +322,15 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
     if (new_grid == NULL)
         goto err;
     /* set padding required for Runge-Kutta */
-    printf("grid_padding on ctx->curr_grid rank %d\n", ctx->rank);
+    /*printf("grid_padding on ctx->curr_grid rank %d\n", ctx->rank);*/
     ctx->curr_grid = grid_padding(new_grid, 1);
-    printf("grid_padding on ctx->next_grid rank %d\n", ctx->rank);
+    /*printf("grid_padding on ctx->next_grid rank %d\n", ctx->rank);*/
     ctx->next_grid = grid_padding(new_grid, 1);
-    printf("grid_padding on ctx->heat_grid rank %d\n", ctx->rank);
+    /*printf("grid_padding on ctx->heat_grid rank %d\n", ctx->rank);*/
     ctx->heat_grid = grid_padding(new_grid, 1);
     //free_grid(new_grid);
     //
-    printf("end of init_ctx rank %d\n", ctx->rank);
+    /*printf("end of init_ctx rank %d with pid : %d\n", ctx->rank, getpid());*/
 
     /* FIXME: create type vector to exchange columns */
     MPI_Type_vector(ctx->global_grid->height, 1, ctx->global_grid->width, MPI_INTEGER, &ctx->vector);
@@ -355,12 +358,12 @@ void exchng2d(ctx_t *ctx) {
 
     //TODO("lab3");
     grid_t *grid = ctx->next_grid;
-    int width = grid->pw;
-    int height = grid->ph;
+    int width = grid->width;
+    int height = grid->height;
     int *data = grid->data;
-    MPI_Comm comm = ctx->comm2d;
-    MPI_Request req[8];
     MPI_Status status[8];
+    /*printf("grid info for rank %d\n", ctx->rank);*/
+    /*printf("width: %d\nheight: %d\nnorth: %d\nsouth: %d\neast: %d\nwest: %d\n", width, height, ctx->north_peer, ctx->south_peer, ctx->east_peer, ctx->west_peer);*/
 
     // Peer ids
     int south = ctx->south_peer,
@@ -368,51 +371,55 @@ void exchng2d(ctx_t *ctx) {
         west  = ctx->west_peer,
         east  = ctx->east_peer;
 
-    // TODO: 
-    // 1- ENLEVER LE RANK DU CALCUL ET JUSTE SE SERVIR DU HEIGHT
-    // 2- Figurer les offsets et les échanges nécessaires
-    int size = width * height,
-        row_start = size * ctx->rank / ctx->numprocs,
-        row_end   = (size * (ctx->rank + 1)) / ctx->numprocs;
+    // temp array for saving borders
+    int * north_border = (int *) calloc(ctx->next_grid->width, sizeof(int));
+    int * south_border = (int *) calloc(ctx->next_grid->width, sizeof(int));
+    int * east_border = (int *) calloc(ctx->next_grid->height, sizeof(int));
+    int * west_border = (int *) calloc(ctx->next_grid->height, sizeof(int));
 
-    // Row exchange
-    // Exchange north->south
-    int *offset_send = data + (row_end - 2) * width;
-    int *offset_recv = data + row_start * width;
-    MPI_Sendrecv(offset_send, width, MPI_INTEGER, south, 0, offset_recv, width, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
-    if (ctx->verbose) {
-        fprintf(ctx->log, "after exchange north->south\n");
-        //fprint_matrix(data, width, row_start, row_end, ctx->log);
+    for(int i = 0; i < grid->width; ++i){
+        north_border[i] = grid->data[i];
+        south_border[i] = grid->data[i + grid->width*(grid->height - 1)];
     }
-    
-    // Exchange south->north
-	offset_send = data + (row_start + 1) * width;
-	offset_recv = data + (row_end - 1) * width;
-    MPI_Sendrecv(offset_send, width, MPI_INTEGER, north, 0, offset_recv, width, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
-    if (ctx->verbose) {
-        fprintf(ctx->log, "after exchange south->north\n");
-        //fprint_matrix(data, width, row_start, row_end, ctx->log);
+
+    for(int j = 0; j < grid->height; ++j){
+        west_border[j] = grid->data[j*grid->width];
+        east_border[j] = grid->data[j*grid->width + grid->width - 1];
     }
-    
-    // Column exchange
-    // Holy fuck, pass column mate - use vector
-    // Exchange east->west
-    offset_send = data + row_start + (width - 1);
-    offset_recv = data + row_start;
-    MPI_Sendrecv(data+, 1, ctx->vector, west, 0, offset_recv, 1, ctx->vector, east, 0, ctx->comm2d, &status[2]);
-    if (ctx->verbose) {
-        fprintf(ctx->log, "after exchange east->west\n");
-        //fprint_matrix(data, , row_start, row_end, ctx->log);
-    }
-    
-    // Exchange west->east
-    offset_send = data + row_start + (width - 1);
-    offset_recv = data + row_start;
-    MPI_Sendrecv(offset_send, 1 , ctx->vector, east, 0, offset_recv, 1, ctx->vector, west, 0, ctx->comm2d, &status[3]);
-    if (ctx->verbose) {
-        fprintf(ctx->log, "after exchange west->east\n");
-        //fprint_matrix(data, width, row_start, row_end, ctx->log);
-    }
+
+    // dirty has hell
+    int *recv1 = (int *) calloc(grid->width, sizeof(int));
+    int *recv2 = (int *) calloc(grid->width, sizeof(int));
+    int *recv3 = (int *) calloc(grid->height, sizeof(int));
+    int *recv4 = (int *) calloc(grid->height, sizeof(int));
+
+    /* TODO
+     * get rid of useless locally created buffers (recv1, ...)
+     */
+    // north->south
+    MPI_Sendrecv(south_border, width, MPI_INTEGER, south, 0, data, width, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
+
+    // south->nort
+    MPI_Sendrecv(north_border, width, MPI_INTEGER, north, 0, data + width*(height-1), width, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
+
+    /* TODO
+     * recv3, recv4 have 'width' size of receize should be height but cause crash
+     * might be because source and destination are incorrect
+     */
+    // east->west
+    MPI_Sendrecv(west_border, height, MPI_INTEGER, west, 0, recv3, width, MPI_INTEGER, east, 0, ctx->comm2d, &status[2]);
+
+    // west->east
+    MPI_Sendrecv(east_border, height, MPI_INTEGER, east, 0, recv4, width, MPI_INTEGER, west, 0, ctx->comm2d, &status[3]);
+
+    free(recv1);
+    free(recv2);
+    free(recv3);
+    free(recv4);
+    free(north_border);
+    free(south_border);
+    free(west_border);
+    free(east_border);
 }
 
 int gather_result(ctx_t *ctx, opts_t *opts) {
