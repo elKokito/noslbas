@@ -154,7 +154,7 @@ void grid_copy(grid_t *src, grid_t *dst) {
 
 	/* both grid must have the same dim */
 	if (s.height != d.height || s.width != d.width) {
-		printf("warning: invalid bounds\n");
+		printf("warning: invalid bounds in grid_copy\n");
 		return;
 	}
 
@@ -173,7 +173,12 @@ void grid_copy_block(grid_t *src, int x1, int y1, int w, int h, grid_t *dst,
 
 	/* check bounds */
 	if (y1 + h > s.ph || x1 + w > s.pw || y2 + h > d.ph || x2 + w > d.pw) {
-		printf("warning: invalid bounds\n");
+		printf("warning: invalid bounds in grid_copy_block\n");
+        printf("%d > %d |", y1 + h, s.ph);
+        printf("%d > %d |", x1 + w, s.pw);
+        printf("%d > %d |", y2 + h, d.ph);
+        printf("%d > %d \n", x2 + w, d.pw);
+
 		return;
 	}
 	for (j1 = y1, j2 = y2; j1 < y1 + h && j2 < y2 + h; j1++, j2++) {
@@ -204,7 +209,7 @@ void grid_set_min(grid_t *min, grid_t *dst) {
 
 	/* both grid must have the same dim */
 	if (s.height != d.height || s.width != d.width) {
-		printf("warning: invalid bounds\n");
+		printf("warning: invalid bounds in grid_set_min\n");
 		return;
 	}
 

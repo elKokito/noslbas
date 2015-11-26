@@ -266,7 +266,8 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                  * MPI_Send args
                  * const void buf*, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm
                  */
-                grid_t *buf = ctx->cart->grids[IX2(i, j, ctx->cart->block_x)];
+                /*grid_t *buf = ctx->cart->grids[IX2(i, j, ctx->cart->block_x)];*/
+                grid_t *buf = cart2d_get_grid(ctx->cart, i, j);
                 /*int count = ctx->cart->dims[i][j];*/
                 int count = buf->width * buf->height;
                 int dest = i*opts->dimx+j;
@@ -296,7 +297,8 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                     }
                 }
                 else {
-                    ctx->global_grid = ctx->cart->grids[IX2(0, 0, 0)];
+                    /*ctx->global_grid = ctx->cart->grids[IX2(0, 0, 0)];*/
+                    ctx->global_grid = cart2d_get_grid(ctx->cart, 0, 0);
                     printf("\x1b[35m rank \x1b[32m %d ", ctx->rank);
                     printf("\x1b[35m received width \x1b[32m %d", ctx->global_grid->width);
                     printf("\x1b[35m height \x1b[32m %d\n", ctx->global_grid->height);
@@ -455,14 +457,39 @@ void exchng2d(ctx_t *ctx) {
 }
 
 int gather_result(ctx_t *ctx, opts_t *opts) {
-    TODO("lab3");
+    /*TODO("lab3");*/
 
-    exit(0);
     int ret = 0;
     grid_t *local_grid = grid_padding(ctx->next_grid, 0);
     if (local_grid == NULL)
         goto err;
 
+    if(ctx->rank != 0) {
+        // send current_grid to rank 0
+        int count = ctx->next_grid->width * ctx->next_grid->height;
+        printf("\x1b[34m rank \x1b[31m %d ", ctx->rank);
+        printf("\x1b[34m size sending: \x1b[31m %d\n", count);
+        MPI_Send(ctx->next_grid->data, count, MPI_INT, 0, 0, ctx->comm2d);
+    }
+    else {
+        // copy next_grid in global_grid
+        grid_copy(ctx->next_grid, ctx->global_grid);
+        // merge global grid in cart
+        cart2d_grid_merge(ctx->cart, ctx->global_grid);
+        // receive grid from all others
+        for(int i = 0; i < opts->dimx; ++i) {
+            for(int j = 0; j < opts->dimy; ++j) {
+                if(i+j != 0) {
+                    printf("\x1b[34m rank \x1b[31m 0 ");
+                    printf("\x1b[34m size receiving: \x1b[31m %d ", local_grid->width * local_grid->height);
+                    printf("\x1b[34m from \x1b[31m %d\n", i+j);
+                    MPI_Recv(local_grid->data, local_grid->width * local_grid->height, MPI_INT, 0, i+j, ctx->comm2d, MPI_STATUS_IGNORE);
+                    /*grid_copy(local_grid, ctx->global_grid);*/
+                    /*cart2d_grid_merge(ctx->cart, local_grid);*/
+                }
+            }
+        }
+    }
     /*
      * FIXME: transfer simulation results from all process to rank=0
      * use grid for this purpose
@@ -471,7 +498,6 @@ int gather_result(ctx_t *ctx, opts_t *opts) {
     /* now we can merge all data blocks, reuse global_grid */
     //cart2d_grid_merge(ctx->cart, ctx->global_grid);
     /* temporairement copie de next_grid */
-    grid_copy(ctx->next_grid, ctx->global_grid);
 
 done: free_grid(local_grid);
       return ret;
