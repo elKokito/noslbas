@@ -221,6 +221,8 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
     MPI_Cart_shift(ctx->comm2d, 1, 1, &ctx->west_peer, &ctx->east_peer);
 
     MPI_Cart_coords(ctx->comm2d, ctx->rank, DIM_2D, ctx->coords);
+    printf("\x1b[36m rank: %d ", ctx->rank);
+    printf("\x1b[36m process id: \x1b[32m %d \x1b[36m coords[0]:\x1b[32m %d \x1b[36m coords[1]: \x1b[32m %d\n \x1b[0m", getpid(), ctx->coords[0], ctx->coords[1]);
 
     /*
      * FIXME: le processus rank=0 charge l'image du disque
@@ -277,7 +279,7 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                     MPI_Send(&buf->padding, 1, MPI_INT, dest, tag, ctx->comm2d);
                     /*printf("MPI_Send padding %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->padding, i, j, ctx->cart->block_x);*/
                     MPI_Send(&count, 1, MPI_INT, dest, tag, ctx->comm2d);
-                    printf("MPI_Send buffer size %d ctx->cart->grids[IX2(%d, %d, %d)] dest: %d\n", count, i, j, ctx->cart->block_x, dest);
+                    /*printf("MPI_Send buffer size %d ctx->cart->grids[IX2(%d, %d, %d)] dest: %d\n", count, i, j, ctx->cart->block_x, dest);*/
                     /*printf("%d\n", MPI_Cart_rank(ctx->comm2d, ctx->coords, &dest));*/
 
                     // send grid
@@ -286,6 +288,9 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                 }
                 else {
                     ctx->global_grid = ctx->cart->grids[IX2(0, 0, 0)];
+                    printf("\x1b[35m rank \x1b[32m %d ", ctx->rank);
+                    printf("\x1b[35m received width \x1b[32m %d", ctx->global_grid->width);
+                    printf("\x1b[35m height \x1b[32m %d\n", ctx->global_grid->height);
                 }
             }
         }
@@ -297,6 +302,9 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
         MPI_Recv(&width, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv width of grid %d in rank %d\n", width, ctx->rank);*/
         MPI_Recv(&height, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
+        printf("\x1b[35m rank \x1b[32m %d ", ctx->rank);
+        printf("\x1b[35m received width \x1b[32m %d", width);
+        printf("\x1b[35m height \x1b[32m %d\n", height);
         /*printf("MPI_Recv height of grid %d in rank %d\n", height, ctx->rank);*/
         MPI_Recv(&padding, 1, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv padding of grid %d in rank %d\n", padding, ctx->rank);*/
@@ -310,12 +318,6 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
         /*printf("MPI_Recv grid in rank %d\n", ctx->rank);*/
         MPI_Recv(ctx->global_grid->data, count, MPI_INT, 0, 0, ctx->comm2d, MPI_STATUS_IGNORE);
         /*printf("MPI_Recv grid received in rank %d\n", ctx->rank);*/
-        /*
-         * FIXME: receive dimensions of the grid
-         * store into new_grid
-         */
-
-        /* Utilisation temporaire de global_grid */
     }
 
     new_grid = ctx->global_grid;
@@ -330,12 +332,12 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
     ctx->heat_grid = grid_padding(new_grid, 1);
     //free_grid(new_grid);
     //
-    /*printf("end of init_ctx rank %d with pid : %d\n", ctx->rank, getpid());*/
+    printf("\x1b[34m end of init_ctx rank %d with pid : %d\n", ctx->rank, getpid());
 
     /* FIXME: create type vector to exchange columns */
-    MPI_Type_vector(ctx->global_grid->height, 1, ctx->global_grid->width, MPI_INTEGER, &ctx->vector);
+    /*MPI_Type_vector(ctx->global_grid->height, 1, ctx->global_grid->width, MPI_INTEGER, &ctx->vector);*/
     /* Make it accessible to communication */
-    MPI_Type_commit(&ctx->vector);
+    /*MPI_Type_commit(&ctx->vector);*/
     return 0;
 err: return -1;
 
@@ -390,32 +392,53 @@ void exchng2d(ctx_t *ctx) {
     // dirty has hell
     int *recv1 = (int *) calloc(grid->width, sizeof(int));
     int *recv2 = (int *) calloc(grid->width, sizeof(int));
-    int *recv3 = (int *) calloc(grid->height, sizeof(int));
-    int *recv4 = (int *) calloc(grid->height, sizeof(int));
 
-    /* TODO
-     * get rid of useless locally created buffers (recv1, ...)
-     */
     // north->south
+    printf("\x1b[33m rank : \x1b[32m %d", ctx->rank);
+    printf("\x1b[33m pid : \x1b[32m %d", getpid());
+    printf("\x1b[33m dest : \x1b[32m %d", south);
+    printf("\x1b[33m source : \x1b[32m %d", north);
+    printf("\x1b[33m size : \x1b[32m %d", width);
+    printf("\x1b[0m\n");
     MPI_Sendrecv(south_border, width, MPI_INTEGER, south, 0, data, width, MPI_INTEGER, north, 0, ctx->comm2d, &status[0]);
 
     // south->nort
+    printf("\x1b[33m rank : \x1b[32m %d", ctx->rank);
+    printf("\x1b[33m pid : \x1b[32m %d", getpid());
+    printf("\x1b[33m dest : \x1b[32m %d", north);
+    printf("\x1b[33m source : \x1b[32m %d", south);
+    printf("\x1b[33m size : \x1b[32m %d", width);
+    printf("\x1b[0m\n");
     MPI_Sendrecv(north_border, width, MPI_INTEGER, north, 0, data + width*(height-1), width, MPI_INTEGER, south, 0, ctx->comm2d, &status[1]);
 
-    /* TODO
-     * recv3, recv4 have 'width' size of receize should be height but cause crash
-     * might be because source and destination are incorrect
-     */
     // east->west
-    MPI_Sendrecv(west_border, height, MPI_INTEGER, west, 0, recv3, width, MPI_INTEGER, east, 0, ctx->comm2d, &status[2]);
+    printf("\x1b[33m rank : \x1b[32m %d", ctx->rank);
+    printf("\x1b[33m pid : \x1b[32m %d", getpid());
+    printf("\x1b[33m dest : \x1b[32m %d", west);
+    printf("\x1b[33m source : \x1b[32m %d", east);
+    printf("\x1b[33m size : \x1b[32m %d", height);
+    printf("\x1b[0m\n");
+    MPI_Sendrecv(west_border, height, MPI_INTEGER, west, 0, recv1, height, MPI_INTEGER, east, 0, ctx->comm2d, &status[2]);
+    // copy recv1 to grid
+    for(int i = 0; i < height; ++i){
+        grid->data[i * grid->width] = recv1[i];
+    }
 
     // west->east
-    MPI_Sendrecv(east_border, height, MPI_INTEGER, east, 0, recv4, width, MPI_INTEGER, west, 0, ctx->comm2d, &status[3]);
+    printf("\x1b[33m rank : \x1b[32m %d", ctx->rank);
+    printf("\x1b[33m pid : \x1b[32m %d", getpid());
+    printf("\x1b[33m dest : \x1b[32m %d", east);
+    printf("\x1b[33m source : \x1b[32m %d", west);
+    printf("\x1b[33m size : \x1b[32m %d", height);
+    printf("\x1b[0m\n");
+    MPI_Sendrecv(east_border, height, MPI_INTEGER, east, 0, recv2, height, MPI_INTEGER, west, 0, ctx->comm2d, &status[3]);
+    // copy recv2 to grid
+    for(int i = 0; i < height; ++i){
+        grid->data[(width - 1) + i*(grid->width)] = recv2[i];
+    }
 
     free(recv1);
     free(recv2);
-    free(recv3);
-    free(recv4);
     free(north_border);
     free(south_border);
     free(west_border);
@@ -425,6 +448,7 @@ void exchng2d(ctx_t *ctx) {
 int gather_result(ctx_t *ctx, opts_t *opts) {
     TODO("lab3");
 
+    exit(0);
     int ret = 0;
     grid_t *local_grid = grid_padding(ctx->next_grid, 0);
     if (local_grid == NULL)
