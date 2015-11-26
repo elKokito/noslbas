@@ -258,6 +258,8 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
         // we don't send to rank 0 so we skip i = 0
         /*printf("dimx = %d\n", opts->dimx);*/
         /*printf("dimy = %d\n", opts->dimy);*/
+        grid_t *g = ctx->cart->grids[IX2(0,0,0)];
+        int size = g->width * g->height;
         for(int i = 0; i < opts->dimx; ++i) {
             for(int j = 0; j < opts->dimy; ++j) {
                 /*
@@ -269,6 +271,7 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                 int count = buf->width * buf->height;
                 int dest = i*opts->dimx+j;
                 int tag = 0;
+
                 if(dest != 0) {
                     // send size of grid
                     /*printf("rank 0 sending to dest: %d with i = %d,  j = %d\n", dest, i, j);*/
@@ -285,6 +288,12 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                     // send grid
                     /*printf("MPI_Send buffer ctx->cart->grids[IX2(%d, %d, %d)]\n", i, j, ctx->cart->block_x);*/
                     MPI_Send(buf->data, count, MPI_INT, dest, tag, ctx->comm2d);
+                    if(count != size) {
+                        // one of the grid doesn't have same size
+                        printf("\x1b[31m rank 0 -> \x1b[0m %d, \x1b[31m next rank ->\x1b[0m %d \n", count , size);
+                        printf("\x1b[31m one of grid doesn't have same size has others\n \x1b[0m");
+                        goto err;
+                    }
                 }
                 else {
                     ctx->global_grid = ctx->cart->grids[IX2(0, 0, 0)];
