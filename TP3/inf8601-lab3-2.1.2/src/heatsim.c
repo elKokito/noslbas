@@ -281,7 +281,7 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
                     MPI_Send(&buf->height, 1, MPI_INT, dest, tag, ctx->comm2d);
                     /*printf("MPI_Send height of %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->height, i, j, ctx->cart->block_x);*/
                     MPI_Send(&buf->padding, 1, MPI_INT, dest, tag, ctx->comm2d);
-                    /*printf("MPI_Send padding %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->padding, i, j, ctx->cart->block_x);*/
+                    printf("MPI_Send padding %d ctx->cart->grids[IX2(%d, %d, %d)]\n", buf->padding, i, j, ctx->cart->block_x);
                     MPI_Send(&count, 1, MPI_INT, dest, tag, ctx->comm2d);
                     /*printf("MPI_Send buffer size %d ctx->cart->grids[IX2(%d, %d, %d)] dest: %d\n", count, i, j, ctx->cart->block_x, dest);*/
                     /*printf("%d\n", MPI_Cart_rank(ctx->comm2d, ctx->coords, &dest));*/
@@ -472,20 +472,20 @@ int gather_result(ctx_t *ctx, opts_t *opts) {
         MPI_Send(ctx->next_grid->data, count, MPI_INT, 0, 0, ctx->comm2d);
     }
     else {
-        // copy next_grid in global_grid
-        grid_copy(ctx->next_grid, ctx->global_grid);
-        // merge global grid in cart
-        cart2d_grid_merge(ctx->cart, ctx->global_grid);
+        /*local_grid->pw *= 2;*/
+        /*local_grid->ph *= 2;*/
+        cart2d_grid_merge(ctx->cart, local_grid);
+        /*grid_copy(ctx->next_grid, local_grid);*/
         // receive grid from all others
         for(int i = 0; i < opts->dimx; ++i) {
             for(int j = 0; j < opts->dimy; ++j) {
                 if(i+j != 0) {
                     printf("\x1b[34m rank \x1b[31m 0 ");
                     printf("\x1b[34m size receiving: \x1b[31m %d ", local_grid->width * local_grid->height);
-                    printf("\x1b[34m from \x1b[31m %d\n", i+j);
-                    MPI_Recv(local_grid->data, local_grid->width * local_grid->height, MPI_INT, 0, i+j, ctx->comm2d, MPI_STATUS_IGNORE);
+                    printf("\x1b[34m from \x1b[31m %d\n", i*opts->dimx+j);
+                    MPI_Recv(local_grid->data, local_grid->width * local_grid->height, MPI_INT, i*opts->dimx+j, 0, ctx->comm2d, MPI_STATUS_IGNORE);
                     /*grid_copy(local_grid, ctx->global_grid);*/
-                    /*cart2d_grid_merge(ctx->cart, local_grid);*/
+                    cart2d_grid_merge(ctx->cart, local_grid);
                 }
             }
         }

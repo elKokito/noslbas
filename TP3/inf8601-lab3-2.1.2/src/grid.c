@@ -173,11 +173,15 @@ void grid_copy_block(grid_t *src, int x1, int y1, int w, int h, grid_t *dst,
 
 	/* check bounds */
 	if (y1 + h > s.ph || x1 + w > s.pw || y2 + h > d.ph || x2 + w > d.pw) {
-		printf("warning: invalid bounds in grid_copy_block\n");
-        printf("%d > %d |", y1 + h, s.ph);
-        printf("%d > %d |", x1 + w, s.pw);
-        printf("%d > %d |", y2 + h, d.ph);
-        printf("%d > %d \n", x2 + w, d.pw);
+		printf("warning: invalid bounds in grid_copy_block\n\x1b[0m");
+        if(y1 + h > s.ph)
+            printf("y1 + h > s.ph -> %d + %d > %d | ", y1 , h, s.ph);
+        if(x1 + w > s.pw)
+            printf("x1 + w > s.pw -> %d + %d > %d | ", x1 , w, s.pw);
+        if(y2 + h > d.ph)
+            printf("y2 + h > d.ph -> %d + %d > %d | ", y2 , h, d.ph);
+        if(x2 + w > d.pw)
+            printf("x2 + w > d.pw -> %d + %d > %d \n", x2 , w, d.pw);
 
 		return;
 	}
