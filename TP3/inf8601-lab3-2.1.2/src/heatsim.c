@@ -368,7 +368,7 @@ void exchng2d(ctx_t *ctx) {
     
     // Column exchange
     // Exchange east->west
-    offset_send = 0;
+    offset_send = 1;
     offset_recv = (width - 1);
     //MPI_Send(data + offset_send, 1, ctx->vector, west, 0, comm);
     //MPI_Recv(data + offset_recv, 1, ctx->vector, east, 0, comm, &status[2]);
@@ -381,7 +381,7 @@ void exchng2d(ctx_t *ctx) {
     
     // Exchange west->east
     offset_send = (width - 2);
-    offset_recv = 1;
+    offset_recv = 0;
     MPI_Sendrecv(data + offset_send, 1, ctx->vector, east, 0, data + offset_recv, 1, ctx->vector, west, 0, comm, &status[3]);
     //if (ctx->verbose) {
     //    printf("Recoit de west(rank = %d) @%d->Envoie a east(rank = %d) @%d\n", west, offset_send, east, offset_recv);
