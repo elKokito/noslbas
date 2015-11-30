@@ -373,8 +373,6 @@ void exchng2d(ctx_t *ctx) {
 }
 
 int gather_result(ctx_t *ctx, opts_t *opts) {
-    //TODO("lab3");
-
     int ret = 0;
     grid_t *local_grid = grid_padding(ctx->next_grid, 0);
     if (local_grid == NULL)
@@ -384,24 +382,11 @@ int gather_result(ctx_t *ctx, opts_t *opts) {
      * FIXME: transfer simulation results from all process to rank=0
      * use grid for this purpose
      */
-    int grid_size = local_grid->width*local_grid->height;
     if (ctx->rank != 0 )
     {
+        int grid_size = local_grid->width*local_grid->height;
         // TODO: Send all simulation results to rank 0
         MPI_Send(local_grid->data, grid_size, MPI_INT, 0, 0, ctx->comm2d); 
-       /* int grid_size = local_grid->width*local_grid->height;
-        int dest = 0,
-            tag = 0;
-        MPI_Comm comm = ctx->comm2d;
-        
-        // send size of grid
-        MPI_Send(&local_grid->width, 1, MPI_INT, dest, tag, comm);
-        MPI_Send(&local_grid->height, 1, MPI_INT, dest, tag, comm);
-        MPI_Send(&local_grid->padding, 1, MPI_INT, dest, tag, comm);
-        MPI_Send(&grid_size, 1, MPI_INT, dest, tag, comm);
-
-        // send grid
-        MPI_Send(local_grid->data, grid_size, MPI_INT, dest, tag, comm);*/
     }
     else // RANK == 0
     {
@@ -412,22 +397,13 @@ int gather_result(ctx_t *ctx, opts_t *opts) {
                 int rank = IX2(i,j,ctx->cart->block_x);
                 if(rank != 0) 
                 {
-                    MPI_Recv(local_grid->data, grid_size, MPI_INT, rank, 0, ctx->comm2d, MPI_STATUS_IGNORE);    
-                    /*MPI_Comm comm = ctx->comm2d;
-        
-                    int width, height, padding, grid_size;
-                    // receive size of grid
-                    MPI_Recv(&width, 1, MPI_INT, rank, 0, comm, MPI_STATUS_IGNORE);
-                    MPI_Recv(&height, 1, MPI_INT, rank, 0, comm, MPI_STATUS_IGNORE);
-                    MPI_Recv(&padding, 1, MPI_INT, rank, 0, comm, MPI_STATUS_IGNORE);
-                    MPI_Recv(&grid_size, 1, MPI_INT, rank, 0, comm, MPI_STATUS_IGNORE);
-        
-                    // need to allocate memory for received grid
-                    local_grid = make_grid(width, height, padding);
-                    MPI_Recv(local_grid->data, grid_size, MPI_INT, rank, 0, comm, MPI_STATUS_IGNORE);*/
+                    int grid_size = ctx->cart->grids[rank]->width*ctx->cart->grids[rank]->height;
+                    MPI_Recv(ctx->cart->grids[rank]->data, grid_size, MPI_INT, rank, 0, ctx->comm2d, MPI_STATUS_IGNORE);    
                 }
-                //TODO: Put local grids into cart
-                grid_copy(local_grid, ctx->cart->grids[rank]);
+                else
+                {
+                    ctx->cart->grids[rank]->data = local_grid->data;
+                }
             }
         } 
     }
