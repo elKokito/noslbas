@@ -1,10 +1,3 @@
-/*
- * heatsim.c
- *
- *  Created on: 2011-11-17
- *      Author: francis
- */
-
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -220,8 +213,6 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
     MPI_Cart_shift(ctx->comm2d, 1, 1, &ctx->west_peer, &ctx->east_peer);
 
     MPI_Cart_coords(ctx->comm2d, ctx->rank, DIM_2D, ctx->coords);
-    printf("\x1b[36m rank: %d ", ctx->rank);
-    printf("\x1b[36m process id: \x1b[32m %d \x1b[36m coords[0]:\x1b[32m %d \x1b[36m coords[1]: \x1b[32m %d\n \x1b[0m", getpid(), ctx->coords[0], ctx->coords[1]);
 
     /*
      * FIXME: le processus rank=0 charge l'image du disque
@@ -330,13 +321,11 @@ void exchng2d(ctx_t *ctx) {
 
     //TODO("lab3");
     grid_t *grid = ctx->next_grid;
-    int width = grid->width;
-    int height = grid->height;
+    int width = grid->pw;
+    int height = grid->ph;
     int *data = grid->data;
     MPI_Comm comm = ctx->comm2d;
     MPI_Status status[8];
-    /*printf("grid info for rank %d\n", ctx->rank);*/
-    /*printf("width: %d\nheight: %d\nnorth: %d\nsouth: %d\neast: %d\nwest: %d\n", width, height, ctx->north_peer, ctx->south_peer, ctx->east_peer, ctx->west_peer);*/
 
     // Peer ids
     int south = ctx->south_peer,
@@ -382,32 +371,6 @@ int gather_result(ctx_t *ctx, opts_t *opts) {
     if (local_grid == NULL)
         goto err;
 
-    if(ctx->rank != 0) {
-        // send current_grid to rank 0
-        int count = ctx->next_grid->width * ctx->next_grid->height;
-        printf("\x1b[34m rank \x1b[31m %d ", ctx->rank);
-        printf("\x1b[34m size sending: \x1b[31m %d\n", count);
-        MPI_Send(ctx->next_grid->data, count, MPI_INT, 0, 0, ctx->comm2d);
-    }
-    else {
-        /*local_grid->pw *= 2;*/
-        /*local_grid->ph *= 2;*/
-        cart2d_grid_merge(ctx->cart, local_grid);
-        /*grid_copy(ctx->next_grid, local_grid);*/
-        // receive grid from all others
-        for(int i = 0; i < opts->dimx; ++i) {
-            for(int j = 0; j < opts->dimy; ++j) {
-                if(i+j != 0) {
-                    printf("\x1b[34m rank \x1b[31m 0 ");
-                    printf("\x1b[34m size receiving: \x1b[31m %d ", local_grid->width * local_grid->height);
-                    printf("\x1b[34m from \x1b[31m %d\n", i*opts->dimx+j);
-                    MPI_Recv(local_grid->data, local_grid->width * local_grid->height, MPI_INT, i*opts->dimx+j, 0, ctx->comm2d, MPI_STATUS_IGNORE);
-                    /*grid_copy(local_grid, ctx->global_grid);*/
-                    cart2d_grid_merge(ctx->cart, local_grid);
-                }
-            }
-        }
-    }
     /*
      * FIXME: transfer simulation results from all process to rank=0
      * use grid for this purpose
@@ -528,4 +491,5 @@ err:
     ret = EXIT_FAILURE;
     goto done;
 }
+
 
