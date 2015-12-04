@@ -247,33 +247,30 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
          * Comment traiter le cas de rank=0 ?
          */
 
-        printf("global grid width = %d\n", ctx->global_grid->width);
-        printf("global grid height = %d\n", ctx->global_grid->height);
         int i, grid_zero_allocated = 0;
-            for(i = 0; i < ctx->numprocs; ++i) {
-                MPI_Comm comm = ctx->comm2d;
-                int tag = 0;
-                int coords[DIM_2D];
-                MPI_Cart_coords(comm, i, DIM_2D, coords);
-                grid_t *buf = cart2d_get_grid(ctx->cart, coords[0], coords[1]);
-                if (i != 0)
-                {
-		            int width = buf->width,
-			            height = buf->height;
-                    // send size of grid
-                    MPI_Send(&width, 1, MPI_INT, i, tag, comm);
-                    MPI_Send(&height, 1, MPI_INT, i, tag, comm);
-
-                    // send grid
-                    MPI_Send(buf->dbl, width*height, MPI_DOUBLE, i, tag, comm);
-                }
-                else if (grid_zero_allocated == 0)
-                {
-                    grid_zero_allocated = 1;
-                    new_grid = make_grid(buf->width, buf->height, 0);
-                    new_grid->dbl = buf->dbl;
-                }
+        for(i = 0; i < ctx->numprocs; ++i) {
+            MPI_Comm comm = ctx->comm2d;
+            int tag = 0;
+            int coords[DIM_2D];
+            MPI_Cart_coords(comm, i, DIM_2D, coords);
+            grid_t *buf = cart2d_get_grid(ctx->cart, coords[0], coords[1]);
+            if (i != 0)
+            {
+		int width = buf->width,
+		   height = buf->height;
+                // send size of grid
+                MPI_Send(&width, 1, MPI_INT, i, tag, comm);
+                MPI_Send(&height, 1, MPI_INT, i, tag, comm);
+                // send grid
+                MPI_Send(buf->dbl, width*height, MPI_DOUBLE, i, tag, comm);
             }
+            else if (grid_zero_allocated == 0)
+            {
+                grid_zero_allocated = 1;
+                new_grid = make_grid(buf->width, buf->height, 0);
+                new_grid->dbl = buf->dbl;
+            }
+        }
     }
     else // RANK != 0
     {
@@ -297,7 +294,6 @@ int init_ctx(ctx_t *ctx, opts_t *opts) {
     ctx->curr_grid = grid_padding(new_grid, 1);
     ctx->next_grid = grid_padding(new_grid, 1);
     ctx->heat_grid = grid_padding(new_grid, 1);
-    free_grid(new_grid);
 
     /* FIXME: create type vector to exchange columns */
     printf("rank : %d, height: %d, width : %d\n", ctx->rank, ctx->curr_grid->ph, ctx->curr_grid->pw);
@@ -337,12 +333,12 @@ void exchng2d(ctx_t *ctx) {
         north = ctx->north_peer,
         west  = ctx->west_peer,
         east  = ctx->east_peer;
-    /*printf("rank : %d\n", ctx->rank);
+    printf("rank : %d\n", ctx->rank);
     printf("NORTH = %d\n", north);
     printf("SOUTH = %d\n", south);
     printf("EAST = %d\n", east);
     printf("WEST = %d\n", west);
-    */
+    
     // Row exchange
     // Exchange north->south
     int offset_send = (height - 2) * width;
@@ -387,22 +383,21 @@ int gather_result(ctx_t *ctx, opts_t *opts) {
     else // RANK == 0
     {
         int i;
-            for(i = 0; i < ctx->numprocs; ++i) {
-                int coords[DIM_2D];
-                MPI_Cart_coords(comm, i, DIM_2D, coords);
-                grid_t *buf = cart2d_get_grid(ctx->cart, coords[0], coords[1]);
-                if(i != 0) 
-                {
-                    int grid_size = buf->width*buf->height;
-                    MPI_Recv(buf->dbl, grid_size, MPI_DOUBLE, i, 0, comm, MPI_STATUS_IGNORE);
-                }
-                else
-                {
-                    buf = grid_clone(local_grid);
-                }
+        for(i = 0; i < ctx->numprocs; ++i) {
+            int coords[DIM_2D];
+            MPI_Cart_coords(comm, i, DIM_2D, coords);
+            grid_t *buf = cart2d_get_grid(ctx->cart, coords[0], coords[1]);
+            if(i != 0) 
+            {
+                int grid_size = buf->width*buf->height;
+                MPI_Recv(buf->dbl, grid_size, MPI_DOUBLE, i, 0, comm, MPI_STATUS_IGNORE);
             }
+            else
+            {
+                buf = grid_clone(local_grid); //COMMENT EVITER DOUBLE FREE AUTREMENT??? grid_copy(local_grid, buf); marche pas non plus
+            }
+         }
     }
-
 
     /* now we can merge all data blocks, reuse global_grid */
     if (ctx->rank == 0)
